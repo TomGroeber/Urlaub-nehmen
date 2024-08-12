@@ -44,6 +44,18 @@ def check_vacation_limits(user_role, start_date, end_date):
         return False
     return True
 
+# Funktion zum Berechnen der verwendeten Urlaubstage
+def calculate_used_vacation_days(user_id):
+    approved_vacations = session.query(Vacation).filter_by(user_id=user_id, status='approved').all()
+    used_days = sum((vacation.end_date - vacation.start_date).days + 1 for vacation in approved_vacations)
+    return used_days
+
+# Funktion zum Berechnen der verbleibenden Urlaubstage
+def calculate_remaining_vacation_days(user_id):
+    user = session.query(User).filter_by(id=user_id).first()
+    used_days = calculate_used_vacation_days(user_id)
+    return user.vacation_days - used_days
+
 # Funktion zum Zurücksetzen der Urlaubsdaten
 def reset_vacations():
     session.query(Vacation).delete()
@@ -63,12 +75,6 @@ def delete_user(user_id):
         # Löschen des Benutzers
         session.delete(user_to_delete)
         session.commit()
-
-# Funktion zum Berechnen der verwendeten Urlaubstage
-def calculate_used_vacation_days(user_id):
-    approved_vacations = session.query(Vacation).filter_by(user_id=user_id, status='approved').all()
-    used_days = sum((vacation.end_date - vacation.start_date).days + 1 for vacation in approved_vacations)
-    return used_days
 
 # Funktion zum Formatieren des Datums
 def format_date(d):
@@ -113,8 +119,7 @@ else:
         st.write(f"Role: {user.role}")
         st.write("You have ∞ vacation days remaining.")
     else:
-        used_days = calculate_used_vacation_days(user.id)
-        remaining_days = user.vacation_days - used_days
+        remaining_days = calculate_remaining_vacation_days(user.id)
         st.write(f"Welcome, {user.username}!")
         st.write(f"Role: {user.role}")
         st.write(f"You have {remaining_days} vacation days remaining.")
@@ -172,8 +177,7 @@ else:
                         session.commit()
                         st.experimental_rerun()
                 with col5:
-                    requester_used_days = calculate_used_vacation_days(requester.id)
-                    requester_remaining_days = requester.vacation_days - requester_used_days
+                    requester_remaining_days = calculate_remaining_vacation_days(requester.id)
                     st.write(f"{requester_remaining_days} days left")
 
             # Knopf zum Zurücksetzen der Urlaubsdaten
@@ -193,13 +197,14 @@ else:
                     with col1:
                         st.write(f"**{user.username} ({user.role})**")
                     with col2:
-                        new_vacation_days = st.number_input(f"Set Vacation Days for {user.username}", min_value=0, value=user.vacation_days, key=f"vac_days_{user.id}")
+                        remaining_days = calculate_remaining_vacation_days(user.id)
+                        new_vacation_days = st.number_input(f"Set Vacation Days for {user.username}", min_value=0, value=remaining_days, key=f"vac_days_{user.id}")
                         new_monthly_days = st.number_input(f"Monthly Vacation Days for {user.username}", min_value=0, value=user.monthly_vacation_days, key=f"monthly_days_{user.id}")
                     with col3:
                         new_role = st.selectbox(f"Role for {user.username}", ["Dreher", "Fräser", "Schweißer", "Admin"], index=["Dreher", "Fräser", "Schweißer", "Admin"].index(user.role), key=f"role_{user.id}")
                     with col4:
                         if st.button(f"Update {user.username}", key=f"update_{user.id}"):
-                            user.vacation_days = new_vacation_days
+                            user.vacation_days = new_vacation_days + calculate_used_vacation_days(user.id)  # Gesamte Urlaubstage inklusive bereits genommener Tage setzen
                             user.monthly_vacation_days = new_monthly_days
                             user.role = new_role
                             session.commit()
