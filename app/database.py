@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Date, ForeignKey, func
+from sqlalchemy import create_engine, Column, Integer, String, Date, Time, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
@@ -9,7 +9,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = 'users'
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
@@ -18,18 +18,25 @@ class User(Base):
     vacation_days = Column(Integer, default=0)
     role = Column(String)
     monthly_vacation_days = Column(Integer, default=2)
+    vacations = relationship("Vacation", back_populates="user")
+
 
 class Vacation(Base):
-    __tablename__ = "vacations"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    __tablename__ = 'vacations'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
     start_date = Column(Date)
     end_date = Column(Date)
-    status = Column(String, default="pending")
-    note = Column(String)
+    status = Column(String)
+    note = Column(String, nullable=True)
+    
+    # Neue Felder hinzufügen
+    start_time = Column(Time, nullable=True)
+    end_time = Column(Time, nullable=True)
 
-    user = relationship("User")
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship("User", back_populates="vacations")
 
 class Settings(Base):
     __tablename__ = "settings"
