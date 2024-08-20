@@ -1,12 +1,11 @@
 import sys
 import os
 from datetime import time, timedelta, datetime, date
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import streamlit as st
 from app.database import init_db, session, User, Vacation, Settings
 from app.user_auth import login_user, register_user
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Set page configuration (must be the first Streamlit command)
 st.set_page_config(page_title="Vacation Manager", layout="wide")
@@ -99,19 +98,6 @@ def delete_vacation(vacation_id):
     session.query(Vacation).filter(Vacation.id == vacation_id).delete()
     session.commit()
 
-# Initialize the database
-init_db()
-
-# Ensure that settings are initialized
-def initialize_settings():
-    settings = session.query(Settings).first()
-    if not settings:
-        settings = Settings(dreher_limit=2, fraeser_limit=2, schweisser_limit=2)
-        session.add(settings)
-        session.commit()
-
-initialize_settings()
-
 # Function to check vacation limits
 def check_vacation_limits(user_role, start_date, end_date):
     settings = session.query(Settings).first()
@@ -170,26 +156,26 @@ def calculate_vacation_days(start_date, end_date, start_time, end_time):
 
     return round(total_days, 4)
 
-# Valid times for selection (limited to the range 7:30 AM - 4:00 PM)
+# Valid times for selection
 valid_times = [time(7, 30), time(8, 0), time(8, 30), time(9, 0), time(9, 30), time(10, 0), 
                time(10, 30), time(11, 0), time(11, 30), time(12, 0), time(12, 30), time(13, 0), 
                time(13, 30), time(14, 0), time(14, 30), time(15, 0), time(15, 30), time(16, 0)]
 
-# Function to get all vacation dates for a user
-def get_user_vacation_dates(user_id):
-    vacations = session.query(Vacation).filter_by(user_id=user_id).all()
-    return vacations
+# Initialize the database
+init_db()
 
-# Function to check if the selected date range overlaps with existing vacations
-def check_vacation_overlap(user_id, start_date, end_date):
-    vacations = session.query(Vacation).filter_by(user_id=user_id).all()
-    for vacation in vacations:
-        if start_date <= vacation.end_date and end_date >= vacation.start_date:
-            return True
-    return False
+# Ensure that settings are initialized
+def initialize_settings():
+    settings = session.query(Settings).first()
+    if not settings:
+        settings = Settings(dreher_limit=2, fraeser_limit=2, schweisser_limit=2)
+        session.add(settings)
+        session.commit()
+
+initialize_settings()
 
 # Insert company logo
-st.image("https://raw.githubusercontent.com/TomGroeber/Urlaub-nehmen/main/assets/logo.png", width=300)
+st.image("https://raw.githubusercontent.com/TomGroeber/Urlaub-nehmen/main/assets/logo.png", width=600)
 
 st.title("Vacation Manager")
 
@@ -378,10 +364,15 @@ else:
         st.subheader("Your Vacation Request")
 
         # Date and time inputs for vacation start and end
-        st.session_state.vacation_start_date = st.date_input("Start Date", value=st.session_state.vacation_start_date or datetime.now().date())
-        st.session_state.vacation_end_date = st.date_input("End Date", value=st.session_state.vacation_end_date or datetime.now().date())
+        st.session_state.vacation_start_date = st.date_input(
+            "Start Date", 
+            value=st.session_state.vacation_start_date or datetime.now().date()
+        )
+        st.session_state.vacation_end_date = st.date_input(
+            "End Date", 
+            value=st.session_state.vacation_end_date or datetime.now().date()
+        )
 
-        # Time inputs limited to the range 7:30 AM - 4:00 PM
         st.session_state.vacation_start_time = st.selectbox("Start Time", valid_times, index=valid_times.index(st.session_state.vacation_start_time))
         st.session_state.vacation_end_time = st.selectbox("End Time", valid_times, index=valid_times.index(st.session_state.vacation_end_time))
 
@@ -391,28 +382,34 @@ else:
                 st.error("End date must be after start date.")
             elif st.session_state.vacation_start_date == st.session_state.vacation_end_date and st.session_state.vacation_start_time >= st.session_state.vacation_end_time:
                 st.error("End time must be after start time.")
-            elif check_vacation_overlap(user.id, st.session_state.vacation_start_date, st.session_state.vacation_end_date):
-                st.error("You already have a vacation scheduled during this period.")
             else:
                 days_requested = calculate_vacation_days(st.session_state.vacation_start_date, st.session_state.vacation_end_date, st.session_state.vacation_start_time, st.session_state.vacation_end_time)
                 if days_requested > remaining_days:
                     st.error(f"You only have {remaining_days:.4f} vacation days remaining.")
                 else:
-                    note = st.text_area("Enter a note for your vacation (optional)")
-                    if st.button("Request Vacation"):
-                        new_vacation = Vacation(
-                            user_id=user.id,
-                            start_date=st.session_state.vacation_start_date,
-                            end_date=st.session_state.vacation_end_date,
-                            start_time=st.session_state.vacation_start_time,
-                            end_time=st.session_state.vacation_end_time,
-                            status='pending',
-                            note=note
-                        )
-                        session.add(new_vacation)
-                        session.commit()
-                        st.success("Vacation request submitted!")
-                        st.experimental_rerun()
+                    existing_vacations = session.query(Vacation).filter_by(user_id=user.id).all()
+                    overlap = any(
+                        (st.session_state.vacation_start_date <= vacation.end_date and st.session_state.vacation_end_date >= vacation.start_date)
+                        for vacation in existing_vacations
+                    )
+                    if overlap:
+                        st.error("You already have a vacation scheduled during this period.")
+                    else:
+                        note = st.text_area("Enter a note for your vacation (optional)")
+                        if st.button("Request Vacation"):
+                            new_vacation = Vacation(
+                                user_id=user.id,
+                                start_date=st.session_state.vacation_start_date,
+                                end_date=st.session_state.vacation_end_date,
+                                start_time=st.session_state.vacation_start_time,
+                                end_time=st.session_state.vacation_end_time,
+                                status='pending',
+                                note=note
+                            )
+                            session.add(new_vacation)
+                            session.commit()
+                            st.success("Vacation request submitted!")
+                            st.experimental_rerun()
 
         # Overview of all vacation requests
         st.subheader("Your Vacation Requests Overview")
