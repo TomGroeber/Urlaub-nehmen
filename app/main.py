@@ -189,7 +189,7 @@ def check_vacation_overlap(user_id, start_date, end_date):
     return False
 
 # Insert company logo
-st.image("https://raw.githubusercontent.com/TomGroeber/Urlaub-nehmen/main/assets/logo.png", width=600)
+st.image("https://raw.githubusercontent.com/TomGroeber/Urlaub-nehmen/main/assets/logo.png", width=300)
 
 st.title("Vacation Manager")
 
