@@ -8,7 +8,7 @@ from app.user_auth import login_user, register_user
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Set page configuration (must be the first Streamlit command)
-st.set_page_config(page_title="Gestionnaire de vacances", layout="wide")
+st.set_page_config(page_title="Vacation Manager", layout="wide")
 
 # Initialize session state variables if they don't exist
 if 'vacation_start_date' not in st.session_state:
@@ -176,6 +176,11 @@ else:
         st.write(f"Rôle: {user.role}")
         st.write(f"Il vous reste {remaining_days:.4f} jours de vacances.")
 
+    # Logout Button
+    if st.button("Se déconnecter"):
+        del st.session_state.user
+        st.experimental_rerun()
+
     # Admin view
     if user.role == 'Admin':
         admin_choice = st.sidebar.selectbox("Actions administratives", ["Gérer les demandes de vacances", "Gérer les utilisateurs", "Définir les limites", "Créer un utilisateur"])
@@ -191,25 +196,54 @@ else:
                 st.markdown("### Demandes en attente")
                 for vacation in pending_vacations:
                     requester = session.query(User).filter_by(id=vacation.user_id).first()
-                    if requester:  # Überprüfen, ob der Benutzer existiert
-                        remaining_days_user = calculate_remaining_vacation_days(requester.id)  # Calculate remaining days for the user
-                        st.markdown(f"<div style='font-weight: bold;'>{requester.username} ({requester.role}) - Jours restants: {remaining_days_user:.4f} <br>Du {format_date(vacation.start_date)} au {format_date(vacation.end_date)} <br><span style='color: orange;'>{vacation.status}</span></div>", unsafe_allow_html=True)
-                        st.write(f"**Note:** {vacation.note}")
-                        st.write(f"**Heure:** {format_time(vacation.start_time)} - {format_time(vacation.end_time)}")
-                        col1, col2, col3 = st.columns([2, 1, 1])
-                        with col1:
-                            if st.button(f"Approuver {vacation.id}", key=f"approve_{vacation.id}"):
-                                if not check_vacation_limits(requester.role, vacation.start_date, vacation.end_date):
-                                    st.warning(f"Impossible d'approuver les vacances pour {requester.username}. Limite atteinte pour le rôle {requester.role}.")
-                                else:
-                                    vacation.status = 'approved'
-                                    session.commit()
-                                    st.experimental_rerun()
-                            if st.button(f"Refuser {vacation.id}", key=f"deny_{vacation.id}"):
-                                vacation.status = 'denied'
+                    remaining_days_user = calculate_remaining_vacation_days(requester.id)  # Calculate remaining days for the user
+                    st.markdown(f"<div style='font-weight: bold;'>{requester.username} ({requester.role}) - Jours restants: {remaining_days_user:.4f} <br>Du {format_date(vacation.start_date)} au {format_date(vacation.end_date)} <br><span style='color: orange;'>{vacation.status}</span></div>", unsafe_allow_html=True)
+                    st.write(f"**Note:** {vacation.note}")
+                    st.write(f"**Heure:** {format_time(vacation.start_time)} - {format_time(vacation.end_time)}")
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    with col1:
+                        if st.button(f"Approuver {vacation.id}", key=f"approve_{vacation.id}"):
+                            if not check_vacation_limits(requester.role, vacation.start_date, vacation.end_date):
+                                st.warning(f"Impossible d'approuver les vacances pour {requester.username}. Limite atteinte pour le rôle {requester.role}.")
+                            else:
+                                vacation.status = 'approved'
                                 session.commit()
                                 st.experimental_rerun()
-                        with col2:
+                        if st.button(f"Refuser {vacation.id}", key=f"deny_{vacation.id}"):
+                            vacation.status = 'denied'
+                            session.commit()
+                            st.experimental_rerun()
+                    with col2:
+                        new_start_date = st.date_input("Date de début", vacation.start_date, key=f"start_{vacation.id}")
+                        new_end_date = st.date_input("Date de fin", vacation.end_date, key=f"end_{vacation.id}")
+                        start_time = vacation.start_time if vacation.start_time else valid_times[0]
+                        end_time = vacation.end_time if vacation.end_time else valid_times[-1]
+                        new_start_time = st.selectbox("Heure de début", valid_times, index=valid_times.index(start_time), key=f"start_time_{vacation.id}")
+                        new_end_time = st.selectbox("Heure de fin", valid_times, index=valid_times.index(end_time), key=f"end_time_{vacation.id}")
+                        if st.button(f"Mettre à jour {vacation.id}", key=f"update_{vacation.id}"):
+                            vacation.start_date = new_start_date
+                            vacation.end_date = new_end_date
+                            vacation.start_time = new_start_time
+                            vacation.end_time = new_end_time
+                            session.commit()
+                            st.experimental_rerun()
+                    with col3:
+                        if st.button(f"Supprimer {vacation.id}", key=f"delete_{vacation.id}"):
+                            delete_vacation(vacation.id)
+                            session.commit()
+                            st.experimental_rerun()
+                    st.markdown("<hr>", unsafe_allow_html=True)  # Separation between requests
+
+            # Display processed requests
+            if processed_vacations:
+                with st.expander("Demandes traitées", expanded=False):
+                    for vacation in processed_vacations:
+                        requester = session.query(User).filter_by(id=vacation.user_id).first()
+                        st.markdown(f"<div style='font-weight: bold;'>{requester.username} ({requester.role}): <br>Du {format_date(vacation.start_date)} au {format_date(vacation.end_date)} <br><span style='color: green;'>{vacation.status}</span></div>", unsafe_allow_html=True)
+                        st.write(f"**Note:** {vacation.note}")
+                        st.write(f"**Heure:** {format_time(vacation.start_time)} - {format_time(vacation.end_time)}")
+                        col1, col2 = st.columns([2, 1])
+                        with col1:
                             new_start_date = st.date_input("Date de début", vacation.start_date, key=f"start_{vacation.id}")
                             new_end_date = st.date_input("Date de fin", vacation.end_date, key=f"end_{vacation.id}")
                             start_time = vacation.start_time if vacation.start_time else valid_times[0]
@@ -223,47 +257,12 @@ else:
                                 vacation.end_time = new_end_time
                                 session.commit()
                                 st.experimental_rerun()
-                        with col3:
+                        with col2:
                             if st.button(f"Supprimer {vacation.id}", key=f"delete_{vacation.id}"):
                                 delete_vacation(vacation.id)
                                 session.commit()
                                 st.experimental_rerun()
                         st.markdown("<hr>", unsafe_allow_html=True)  # Separation between requests
-                    else:
-                        st.error(f"Le demandeur pour la demande de vacances {vacation.id} n'existe plus.")
-
-            # Display processed requests
-            if processed_vacations:
-                with st.expander("Demandes traitées", expanded=False):
-                    for vacation in processed_vacations:
-                        requester = session.query(User).filter_by(id=vacation.user_id).first()
-                        if requester:  # Überprüfen, ob der Benutzer existiert
-                            st.markdown(f"<div style='font-weight: bold;'>{requester.username} ({requester.role}): <br>Du {format_date(vacation.start_date)} au {format_date(vacation.end_date)} <br><span style='color: green;'>{vacation.status}</span></div>", unsafe_allow_html=True)
-                            st.write(f"**Note:** {vacation.note}")
-                            st.write(f"**Heure:** {format_time(vacation.start_time)} - {format_time(vacation.end_time)}")
-                            col1, col2 = st.columns([2, 1])
-                            with col1:
-                                new_start_date = st.date_input("Date de début", vacation.start_date, key=f"start_{vacation.id}")
-                                new_end_date = st.date_input("Date de fin", vacation.end_date, key=f"end_{vacation.id}")
-                                start_time = vacation.start_time if vacation.start_time else valid_times[0]
-                                end_time = vacation.end_time if vacation.end_time else valid_times[-1]
-                                new_start_time = st.selectbox("Heure de début", valid_times, index=valid_times.index(start_time), key=f"start_time_{vacation.id}")
-                                new_end_time = st.selectbox("Heure de fin", valid_times, index=valid_times.index(end_time), key=f"end_time_{vacation.id}")
-                                if st.button(f"Mettre à jour {vacation.id}", key=f"update_{vacation.id}"):
-                                    vacation.start_date = new_start_date
-                                    vacation.end_date = new_end_date
-                                    vacation.start_time = new_start_time
-                                    vacation.end_time = new_end_time
-                                    session.commit()
-                                    st.experimental_rerun()
-                            with col2:
-                                if st.button(f"Supprimer {vacation.id}", key=f"delete_{vacation.id}"):
-                                    delete_vacation(vacation.id)
-                                    session.commit()
-                                    st.experimental_rerun()
-                            st.markdown("<hr>", unsafe_allow_html=True)  # Separation between requests
-                        else:
-                            st.error(f"Le demandeur pour la demande de vacances {vacation.id} n'existe plus.")
 
             # Button to reset all vacations
             st.markdown("---")
@@ -393,7 +392,7 @@ else:
             for vacation in vacations:
                 status_color = "green" if vacation.status == "approved" else "orange" if vacation.status == "pending" else "red"
                 st.markdown(
-                    f"<div style='color: {status_color};'>{format_date(vacation.start_date)} au {format_date(vacation.end_date)} "
+                    f"<div style='color: {status_color};'>{format_date(vacation.start_date)} to {format_date(vacation.end_date)} "
                     f"({format_time(vacation.start_time)} - {format_time(vacation.end_time)}) - {vacation.status} - Note: {vacation.note}</div>",
                     unsafe_allow_html=True,
                 )
