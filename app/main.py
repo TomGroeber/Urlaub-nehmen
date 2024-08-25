@@ -8,7 +8,7 @@ from app.user_auth import login_user, register_user
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Set page configuration (must be the first Streamlit command)
-st.set_page_config(page_title="Vacation Manager", layout="wide")
+st.set_page_config(page_title="Gestionnaire de vacances", layout="wide")
 
 # Initialize session state variables if they don't exist
 if 'vacation_start_date' not in st.session_state:
@@ -70,11 +70,11 @@ def delete_vacation(vacation_id):
 # Function to check vacation limits
 def check_vacation_limits(user_role, start_date, end_date):
     settings = session.query(Settings).first()
-    if user_role == 'Dreher':
-        limit = settings.dreher_limit
-    elif user_role == 'Fräser':
+    if user_role == 'Tourneur':
+        limit = settings.tourneur_limit
+    elif user_role == 'Fraiseur':
         limit = settings.fraeser_limit
-    elif user_role == 'Schweißer':
+    elif user_role == 'Soudeur':
         limit = settings.schweisser_limit
     else:
         return True  # No limit for other roles
@@ -87,6 +87,7 @@ def check_vacation_limits(user_role, start_date, end_date):
     ).count()
 
     return overlapping_vacations < limit
+
 
 # Function to calculate used vacation days
 def calculate_used_vacation_days(user_id):
@@ -137,7 +138,7 @@ init_db()
 def initialize_settings():
     settings = session.query(Settings).first()
     if not settings:
-        settings = Settings(dreher_limit=2, fraeser_limit=2, schweisser_limit=2)
+        settings = Settings(tourneur_limit=2, fraeser_limit=2, schweisser_limit=2)
         session.add(settings)
         session.commit()
 
@@ -286,7 +287,7 @@ else:
                         new_vacation_days = st.number_input(f"Définir les jours de vacances pour {user.username}", min_value=0.0, value=float(remaining_days), step=0.1, format="%.4f", key=f"vac_days_{user.id}")
                         new_monthly_days = st.number_input(f"Jours de vacances mensuels pour {user.username}", min_value=0.0, value=float(user.monthly_vacation_days), step=0.0001, format="%.4f", key=f"monthly_days_{user.id}")
                     with col3:
-                        new_role = st.selectbox(f"Rôle pour {user.username}", ["Dreher", "Fräser", "Schweißer", "Admin"], index=["Dreher", "Fräser", "Schweißer", "Admin"].index(user.role), key=f"role_{user.id}")
+                        new_role = st.selectbox(f"Rôle pour {user.username}", ["Tourneur", "Fraiseur", "Soudeur", "Admin"], index=["Tourneur", "Fraiseur", "Soudeur", "Admin"].index(user.role), key=f"role_{user.id}")
                     with col4:
                         if st.button(f"Mise à jour {user.username}", key=f"update_{user.id}"):
                             user.vacation_days = new_vacation_days + calculate_used_vacation_days(user.id)  # Set total vacation days including already taken days
@@ -306,16 +307,16 @@ else:
             st.subheader("Vue administrateur : Définir les limites")
             settings = session.query(Settings).first()
             if not settings:
-                settings = Settings(dreher_limit=2, fraeser_limit=2, schweisser_limit=2)
+                settings = Settings(tourneur_limit=2, fraeser_limit=2, schweisser_limit=2)
                 session.add(settings)
                 session.commit()
 
-            new_dreher_limit = st.number_input("Définir la limite pour Dreher", min_value=1.0, value=float(settings.dreher_limit), step=0.1, format="%.1f")
-            new_fraeser_limit = st.number_input("Définir la limite pour Fräser", min_value=1.0, value=float(settings.fraeser_limit), step=0.1, format="%.1f")
-            new_schweisser_limit = st.number_input("Définir la limite pour Schweißer", min_value=1.0, value=float(settings.schweisser_limit), step=0.1, format="%.1f")
+            new_tourneur_limit = st.number_input("Définir la limite pour Tourneur", min_value=1.0, value=float(settings.tourneur_limit), step=0.1, format="%.1f")
+            new_fraeser_limit = st.number_input("Définir la limite pour Fraiseur", min_value=1.0, value=float(settings.fraeser_limit), step=0.1, format="%.1f")
+            new_schweisser_limit = st.number_input("Définir la limite pour Soudeur", min_value=1.0, value=float(settings.schweisser_limit), step=0.1, format="%.1f")
 
             if st.button("Mettre à jour les limites"):
-                settings.dreher_limit = new_dreher_limit
+                settings.tourneur_limit = new_tourneur_limit
                 settings.fraeser_limit = new_fraeser_limit
                 settings.schweisser_limit = new_schweisser_limit
                 session.commit()
@@ -327,7 +328,7 @@ else:
             new_email = st.text_input("Email")
             new_password = st.text_input("Mot de passe", type="password")
             new_vacation_days = st.number_input("Jours de vacances", min_value=0.0, step=0.1, format="%.4f")
-            new_role = st.selectbox("Rôle", ["Dreher", "Fräser", "Schweißer", "Admin"])
+            new_role = st.selectbox("Rôle", ["Tourneur", "Fraiseur", "Soudeur", "Admin"])
             new_monthly_days = st.number_input("Jours de vacances mensuels", min_value=0.0, value=2.7342, step=0.0001, format="%.4f")
 
             if st.button("Créer un utilisateur"):
