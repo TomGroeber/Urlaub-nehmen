@@ -71,7 +71,7 @@ def delete_vacation(vacation_id):
 def check_vacation_limits(user_role, start_date, end_date):
     settings = session.query(Settings).first()
     if user_role == 'Tourneur':
-        limit = settings.tourneur_limit
+        limit = settings.dreher_limit
     elif user_role == 'Fraiseur':
         limit = settings.fraeser_limit
     elif user_role == 'Soudeur':
@@ -87,7 +87,6 @@ def check_vacation_limits(user_role, start_date, end_date):
     ).count()
 
     return overlapping_vacations < limit
-
 
 # Function to calculate used vacation days
 def calculate_used_vacation_days(user_id):
@@ -138,7 +137,7 @@ init_db()
 def initialize_settings():
     settings = session.query(Settings).first()
     if not settings:
-        settings = Settings(tourneur_limit=2, fraeser_limit=2, schweisser_limit=2)
+        settings = Settings(dreher_limit=2, fraeser_limit=2, schweisser_limit=2)
         session.add(settings)
         session.commit()
 
@@ -307,16 +306,16 @@ else:
             st.subheader("Vue administrateur : Définir les limites")
             settings = session.query(Settings).first()
             if not settings:
-                settings = Settings(tourneur_limit=2, fraeser_limit=2, schweisser_limit=2)
+                settings = Settings(dreher_limit=2, fraeser_limit=2, schweisser_limit=2)
                 session.add(settings)
                 session.commit()
 
-            new_tourneur_limit = st.number_input("Définir la limite pour Tourneur", min_value=1.0, value=float(settings.tourneur_limit), step=0.1, format="%.1f")
+            new_tourneur_limit = st.number_input("Définir la limite pour Tourneur", min_value=1.0, value=float(settings.dreher_limit), step=0.1, format="%.1f")
             new_fraeser_limit = st.number_input("Définir la limite pour Fraiseur", min_value=1.0, value=float(settings.fraeser_limit), step=0.1, format="%.1f")
             new_schweisser_limit = st.number_input("Définir la limite pour Soudeur", min_value=1.0, value=float(settings.schweisser_limit), step=0.1, format="%.1f")
 
             if st.button("Mettre à jour les limites"):
-                settings.tourneur_limit = new_tourneur_limit
+                settings.dreher_limit = new_tourneur_limit
                 settings.fraeser_limit = new_fraeser_limit
                 settings.schweisser_limit = new_schweisser_limit
                 session.commit()
