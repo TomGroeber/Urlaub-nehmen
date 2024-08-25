@@ -265,12 +265,12 @@ else:
                         st.markdown("<hr>", unsafe_allow_html=True)  # Separation between requests
 
             # Button to reset all vacations
-            st.markdown("---")
-            if st.button("Réinitialiser toutes les vacances"):
-                session.query(Vacation).delete()
-                session.commit()
-                st.experimental_rerun()
-                st.success("Toutes les entrées de vacances ont été réinitialisées.")
+            #st.markdown("---")
+            #if st.button("Réinitialiser toutes les vacances"):
+                #session.query(Vacation).delete()
+                #session.commit()
+                #st.experimental_rerun()
+                #st.success("Toutes les entrées de vacances ont été réinitialisées.")
         
         if admin_choice == "Gérer les utilisateurs":
             st.subheader("Vue administrateur : Gérer les utilisateurs")
