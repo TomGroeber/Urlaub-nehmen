@@ -5,6 +5,7 @@ import streamlit as st
 from app.database import init_db, session, User, Vacation, Settings
 from app.user_auth import login_user, register_user
 
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Set page configuration (must be the first Streamlit command)
