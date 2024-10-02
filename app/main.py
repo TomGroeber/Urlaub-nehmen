@@ -2,11 +2,12 @@ import sys
 import os
 from datetime import time, timedelta, datetime, date
 import streamlit as st
+
+# Stelle sicher, dass der 'app'-Ordner im Python-Suchpfad enthalten ist
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app.database import init_db, session, User, Vacation, Settings
 from app.user_auth import login_user, register_user
-
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Set page configuration (must be the first Streamlit command)
 st.set_page_config(page_title="Gestionnaire de vacances", layout="wide")
@@ -28,7 +29,7 @@ st.markdown(
     /* Set the background color for the entire app */
     .main {
         background-color: #0e57b3;
-    }
+    } 
     /* Set the background color for the sidebar */
     section[data-testid="stSidebar"] {
         background-color: #0c3f80 !important;
