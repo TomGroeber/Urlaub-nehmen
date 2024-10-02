@@ -148,6 +148,7 @@ initialize_settings()
 # Insert company logo
 st.image("https://raw.githubusercontent.com/TomGroeber/Urlaub-nehmen/main/assets/logo.png", width=300)
 
+
 st.title("Gestionnaire de vacances")
 
 # Login
