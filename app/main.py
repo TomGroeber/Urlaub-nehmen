@@ -146,7 +146,7 @@ def initialize_settings():
 initialize_settings()
 
 # Insert company logo
-st.image("https://raw.githubusercontent.com/TomGroeber/Urlaub-nehmen/main/assets/logo.png", width=300)
+st.image("https://raw.githubusercontent.com/TomGroeber/Urlaub-nehmen/main/assets/logo new.png", width=500)
 
 
 st.title("Gestionnaire de vacances")
